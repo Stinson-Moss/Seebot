@@ -5,6 +5,6 @@ mysql-connector-python
 python-dotenv
 gunicorn
 flask-cors
-torch.hub
+torch
 Pillow
 numpy
