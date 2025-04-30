@@ -1,6 +1,8 @@
-async function onLoaded() {
-    
-}
+// API endpoint for YOLOv5 detection
+const API_URL = 'http://127.0.0.1:5000/api/detect';
+
+// API endpoint for saving detections
+const SAVE_DETECTION_URL = 'http://127.0.0.1:5000/api/save_detection';
 
 // Generate mock links for detected objects
 function getObjectLinks(objectName) {
@@ -39,105 +41,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     const detailDate = document.getElementById('detail-date');
     const detailLinks = document.getElementById('detail-links');
     const closeDetails = document.getElementById('close-details');
+    
+    // Login elements
+    const loginWidget = document.getElementById('login-widget');
+    const userEmailInput = document.getElementById('user-email');
+    const confirmLoginBtn = document.getElementById('confirm-login');
+    const closeLoginBtn = document.getElementById('close-login');
 
     let stream = null;
-    let model = null;
     let detecting = false;
     let speechSynthesis = window.speechSynthesis;
     let lastSpokenObjects = [];
     
     // Array to store detection history
     let detectionHistory = [];
-
-    // User authentication state
     let user = null;
 
-    // Function to show login widget
-    function showLoginWidget(item) {
-        // Get elements
-        const loginWidget = document.getElementById('login-widget');
-        const closeLoginBtn = document.getElementById('close-login');
-        const confirmLoginBtn = document.getElementById('confirm-login');
-        const userEmailInput = document.getElementById('user-email');
-        
-        // Create overlay (if it doesn't exist)
-        let loginOverlay = document.getElementById('login-overlay');
-        if (!loginOverlay) {
-            loginOverlay = document.createElement('div');
-            loginOverlay.className = 'overlay';
-            loginOverlay.id = 'login-overlay';
-            document.body.appendChild(loginOverlay);
+    // Get stored user from localStorage if available
+    const storedUser = localStorage.getItem('seebot_user');
+    if (storedUser) {
+        user = storedUser;
+    }
+
+    // Setup login widget listeners
+    confirmLoginBtn.addEventListener('click', () => {
+        const email = userEmailInput.value.trim();
+        if (email) {
+            user = email;
+            localStorage.setItem('seebot_user', user);
+            hideLoginWidget();
         }
+    });
+
+    closeLoginBtn.addEventListener('click', hideLoginWidget);
+
+    function showLoginWidget(item) {
+        const loginOverlay = document.createElement('div');
+        loginOverlay.className = 'overlay';
+        loginOverlay.id = 'login-overlay';
+        document.body.appendChild(loginOverlay);
         
-        // Show overlay and widget
         loginOverlay.style.display = 'block';
         loginWidget.style.display = 'block';
         
-        // Focus on input
+        // Pre-fill with stored user
+        if (user) {
+            userEmailInput.value = user;
+        }
+        
         userEmailInput.focus();
         
-        // Handle close button
-        closeLoginBtn.onclick = () => {
-            loginWidget.style.display = 'none';
-            loginOverlay.style.display = 'none';
-        };
-        
-        // Handle click on overlay to close
-        loginOverlay.onclick = () => {
-            loginWidget.style.display = 'none';
-            loginOverlay.style.display = 'none';
-        };
-        
-        // Handle confirm button
-        confirmLoginBtn.onclick = () => {
-            const email = userEmailInput.value.trim();
-            if (email && email.length > 0) {
-                user = email;
-                loginWidget.style.display = 'none';
-                loginOverlay.style.display = 'none';
-                
-                // Save the detection
-                saveItemToDatabase(item, user);
-                
-                // Store email in localStorage for future use
-                localStorage.setItem('seebot_user', user);
-            } else {
-                // Shake effect for empty input
-                userEmailInput.classList.add('shake');
-                setTimeout(() => {
-                    userEmailInput.classList.remove('shake');
-                }, 500);
-            }
-        };
-        
-        // Handle Enter key in input
-        userEmailInput.onkeydown = (e) => {
-            if (e.key === 'Enter') {
-                confirmLoginBtn.click();
-            }
-        };
-        
-        // Pre-fill with stored email if available
-        const storedUser = localStorage.getItem('seebot_user');
-        if (storedUser) {
-            userEmailInput.value = storedUser;
-        }
+        // Handle overlay click
+        loginOverlay.addEventListener('click', hideLoginWidget);
     }
     
-    // Function to save detection to database
-    async function saveItemToDatabase(item, user) {
-        if (!user) {
-            showLoginWidget(item);
-            return;
+    function hideLoginWidget() {
+        loginWidget.style.display = 'none';
+        const loginOverlay = document.getElementById('login-overlay');
+        if (loginOverlay) {
+            loginOverlay.remove();
         }
-        
+    }
+
+    async function saveItemToDatabase(item, user) { 
         try {
             console.log(`Saving detection for ${user}: ${item.name}`);
+
+            if (!user) {
+                showLoginWidget();
+            }
             
-            // API
-            await axios.post('/api/detections', {
+            // Here you would typically make an API call:
+            const response = await axios.post(SAVE_DETECTION_URL, {
                 user: user,
-                item: item
+                detection: {
+                    name: item.name,
+                    links: item.links
+                }
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
             
             // Show success message
@@ -146,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             successMsg.innerHTML = '<i class="fas fa-check-circle"></i> Saved successfully!';
             document.body.appendChild(successMsg);
             
+            // Remove after 3 seconds
             setTimeout(() => {
                 successMsg.remove();
             }, 3000);
@@ -159,22 +144,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Failed to save';
             document.body.appendChild(errorMsg);
             
-            
+            // Remove after 3 seconds
             setTimeout(() => {
                 errorMsg.remove();
             }, 3000);
-        }
-    }
-
-    async function loadModel() {
-        try {
-            predictionText.innerHTML = '<i class="fas fa-cog fa-spin"></i> Loading AI model...';
-            model = await cocoSsd.load();
-            console.log("COCO-SSD model loaded successfully!");
-            predictionText.innerHTML = '<i class="fas fa-check"></i> Model loaded. Start camera to begin.';
-        } catch (error) {
-            console.error("Error loading model:", error);
-            predictionText.innerText = "Error loading model.";
         }
     }
 
@@ -183,9 +156,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log("Requesting camera access...");
             stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             videoElement.srcObject = stream;
+            videoElement.onloadedmetadata = () => {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+            };
+            
             startButton.disabled = true;
             stopButton.disabled = false;
             predictionText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Camera started. Detecting objects...';
+            
             detectObjects();
         } catch (error) {
             console.error("Error accessing camera:", error);
@@ -210,11 +189,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function detectObjects() {
         detecting = true;
         
-        if (!model) {
-            console.warn("Model not loaded yet. Waiting...");
-            return;
-        }
-        
         // Wait for the video to be properly loaded
         if (videoElement.readyState < 2) {
             await new Promise(resolve => {
@@ -224,52 +198,83 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         
-        // Set canvas dimensions to match video
-        canvas.width = videoElement.videoWidth;
-        canvas.height = videoElement.videoHeight;
+        // Create a hidden canvas to capture frames
+        const captureCanvas = document.createElement('canvas');
+        captureCanvas.width = videoElement.videoWidth;
+        captureCanvas.height = videoElement.videoHeight;
+        const captureCtx = captureCanvas.getContext('2d');
 
         while (detecting) {
-            const predictions = await axios.post('/api/detect', {
-                image: videoElement.srcObject
-            });
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-            // Display predictions with icons
-            if (predictions.length > 0) {
-                predictionText.innerHTML = `<i class="fas fa-check-circle"></i> Detected: ${predictions.map(p => `<strong>${p.class}</strong> (${Math.round(p.score * 100)}%)`).join(", ")}`;
+            try {
+                // Draw current video frame to the hidden canvas
+                captureCtx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
                 
-                // Speak detected objects
-                speakDetectedObjects(predictions);
-                
-                // Add to detection history (only high confidence predictions)
-                addToHistory(predictions.filter(p => p.score > 0.5));
-                
-                // Draw bounding boxes
-                predictions.forEach(prediction => {
-                    const [x, y, width, height] = prediction.bbox;
-                    
-                    // Draw rectangle
-                    ctx.strokeStyle = '#e74c3c';
-                    ctx.lineWidth = 4;
-                    ctx.strokeRect(x, y, width, height);
-                    
-                    // Draw label background
-                    ctx.fillStyle = 'rgba(231, 76, 60, 0.8)';
-                    const textWidth = ctx.measureText(prediction.class).width;
-                    ctx.fillRect(x, y - 30, textWidth + 20, 30);
-                    
-                    // Draw text
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = '18px Roboto';
-                    ctx.fillText(prediction.class, x + 10, y - 10);
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => {
+                    captureCanvas.toBlob(resolve, 'image/jpeg', 0.9);
                 });
-            } else {
-                predictionText.innerHTML = '<i class="fas fa-search"></i> No objects detected';
+                
+                // Create form data for API request
+                const formData = new FormData();
+                formData.append('image', blob, 'frame.jpg');
+                
+                // Send frame to YOLOv5 backend for detection
+                const response = await axios.post(API_URL, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+                
+                // Process the response
+                const data = response.data;
+                const predictions = data.detections || [];
+                
+                // Draw the current frame on the visible canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                
+                // Display predictions with icons
+                if (predictions.length > 0) {
+                    predictionText.innerHTML = `<i class="fas fa-check-circle"></i> Detected: ${predictions.map(p => `<strong>${p.name}</strong> (${Math.round(p.confidence * 100)}%)`).join(", ")}`;
+                    
+                    // Speak detected objects
+                    speakDetectedObjects(predictions);
+                    
+                    // Add to detection history
+                    addToHistory(predictions);
+                    
+                    // Draw bounding boxes
+                    predictions.forEach(prediction => {
+                        const xmin = prediction.xmin;
+                        const ymin = prediction.ymin;
+                        const width = prediction.xmax - prediction.xmin;
+                        const height = prediction.ymax - prediction.ymin;
+                        
+                        // Draw rectangle
+                        ctx.strokeStyle = '#e74c3c';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(xmin, ymin, width, height);
+                        
+                        // Draw label background
+                        ctx.fillStyle = 'rgba(231, 76, 60, 0.8)';
+                        const textWidth = ctx.measureText(prediction.name).width;
+                        ctx.fillRect(xmin, ymin - 30, textWidth + 20, 30);
+                        
+                        // Draw text
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '18px Roboto';
+                        ctx.fillText(prediction.name, xmin + 10, ymin - 10);
+                    });
+                } else {
+                    predictionText.innerHTML = '<i class="fas fa-search"></i> No objects detected';
+                }
+            } catch (error) {
+                console.error("Error during detection:", error);
+                predictionText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Detection error';
             }
-
-            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Limit frame rate for performance
+            await new Promise(resolve => setTimeout(resolve, 16));
         }
     }
     
@@ -280,12 +285,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Get current object classes
-        const currentObjects = predictions.map(p => p.class);
+        const currentObjects = predictions.map(p => p.name);
         
         // Filter for objects with confidence over 50%
         const highConfidenceObjects = predictions
-            .filter(p => p.score > 0.5)
-            .map(p => p.class);
+            .filter(p => p.confidence > 0.5)
+            .map(p => p.name);
             
         // Check if we have new objects to announce
         const newObjects = highConfidenceObjects.filter(obj => !lastSpokenObjects.includes(obj));
@@ -326,33 +331,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Add detected objects to history
     async function addToHistory(predictions) {
-        if (predictions.length === 0) return;
+        if (!predictions || predictions.length === 0) return;
         
         const timestamp = new Date();
         
         // Process each prediction and add to history if it's new
         predictions.forEach(prediction => {
-            // Generate mock links for the object (in real app, you'd fetch these from your backend)
-            const links = getObjectLinks(prediction.class);
+            // Get links from the prediction if available, or generate mock links
+            const links = getObjectLinks(prediction.name);
             
             // Add to history array (prepend to show newest first)
             // Check if this object already exists in the history
-            const existingIndex = detectionHistory.findIndex(item => item.name === prediction.class);
+            const existingIndex = detectionHistory.findIndex(item => item.name === prediction.name);
             if (existingIndex !== -1) {
                 // Remove the existing entry if found
                 detectionHistory.splice(existingIndex, 1);
             }
+            
             detectionHistory.unshift({
-                name: prediction.class,
-                confidence: prediction.score,
+                name: prediction.name,
+                confidence: prediction.confidence,
                 timestamp: timestamp,
                 links: links,
-                // Assign an icon based on object class
-                icon: getObjectIcon(prediction.class)
+                // Assign an icon based on object name
+                icon: getObjectIcon(prediction.name)
             });
         });
         
-        // Limit history to most recent 50 items to prevent it from growing too large
+        // Limit history to most recent 50 items
         if (detectionHistory.length > 50) {
             detectionHistory = detectionHistory.slice(0, 50);
         }
@@ -514,7 +520,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    await loadModel();
     startButton.addEventListener('click', startCamera);
     stopButton.addEventListener('click', stopCamera);
     closeDetails.addEventListener('click', closeDetailsPanel);

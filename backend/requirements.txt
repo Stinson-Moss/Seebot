@@ -1,4 +1,7 @@
 Flask
+Flask[async]
 Flask-Dance
 mysql-connector-python
 python-dotenv
+gunicorn
+flask-cors

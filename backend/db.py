@@ -1,6 +1,9 @@
 import mysql.connector as mysql
 import os
 from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Load environment variables
 load_dotenv()
@@ -26,22 +29,20 @@ async def get_history(user: str):
     return fetched_history
 
 async def save_detection(user: str, detection: dict):
+    logging.debug('Saving detection for user')
     conn = connect()
+    logging.debug('Connected to database')
     cursor = conn.cursor()
 
-    cursor.execute("INSERT INTO detections (email, object_detected, links) VALUES (%s, %s, %s)", (user, detection["name"], detection["links"]))
-    
-    conn.commit()
-    conn.close()
-    
+    logging.debug('Cursor created')
 
-async def add_detections(user: str, detections: list):
-    conn = connect()
-    cursor = conn.cursor()
-    
-    for detection in detections:
-        cursor.execute("INSERT INTO detections (email, object_detected, links) VALUES (%s, %s, %s)", (user, detection["name"], detection["links"]))
-    
-    conn.commit()
-    conn.close()
+    links = ",".join(detection["links"])
+    logging.debug('Links: ', links)
 
+    cursor.execute("INSERT INTO detections (email, object_detected, links) VALUES (%s, %s, %s)", (user, detection["name"], links))
+    logging.debug('Executed query')
+
+    conn.commit()
+    logging.debug('Committed')
+    conn.close()
+    logging.debug('Closed connection')
