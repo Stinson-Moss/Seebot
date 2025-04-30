@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import torch
 from PIL import Image
-import os
 from db import save_detection
 from db import get_history
 from scraper import get_google_search_links
