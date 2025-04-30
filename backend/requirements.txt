@@ -8,4 +8,4 @@ flask-cors
 torch
 Pillow
 numpy
-BeatifulSoup4
+

@@ -3,7 +3,6 @@ from torch import hub
 from PIL import Image
 from db import save_detection
 from db import get_history
-from scraper import get_google_search_links
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -56,7 +55,6 @@ async def detect():
                         "ymax": detection["ymax"],
                         "name": detection["name"],
                         "confidence": detection["confidence"],
-                        "links": get_google_search_links(detection["name"])
                     }
                     for detection in detections
                     if detection["confidence"] > 0.5
@@ -93,7 +91,6 @@ async def detect():
             "ymax": detection["ymax"],
             "name": detection["name"],
             "confidence": detection["confidence"],
-            "links": get_google_search_links(detection["name"])
         }
 
         for detection in detections
