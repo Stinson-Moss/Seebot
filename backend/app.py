@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from torch import hub
+from yolov5 import YOLOv5
 from PIL import Image
 from db import save_detection_db
 from db import get_history_db
@@ -9,7 +9,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Load YOLOv5 model
-model = hub.load('ultralytics/yolov5', 'yolov5s', trust_repo=True)
+model = YOLOv5('yolov5s.pt', device='cpu')
 
 @app.route('/api/detect', methods=['POST'])
 async def detect():

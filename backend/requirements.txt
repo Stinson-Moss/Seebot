@@ -5,7 +5,7 @@ mysql-connector-python
 python-dotenv
 gunicorn
 flask-cors
-torch
+yolov5
 Pillow
 numpy
 opencv-python
