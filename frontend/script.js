@@ -110,15 +110,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!user) {
                 showLoginWidget();
             }
-            
-            // Here you would typically make an API call:
-            const response = await axios.post(SAVE_DETECTION_URL, {
+
+            let data = JSON.stringify({
                 user: user,
                 detection: {
                     name: item.name,
                     links: item.links
                 }
-            }, {
+            });
+            
+            // Here you would typically make an API call:
+            const response = await axios.post(SAVE_DETECTION_URL, data, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -138,13 +140,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error("Error saving detection:", error);
             
-            // Show error message
             const errorMsg = document.createElement('div');
             errorMsg.className = 'error-message';
             errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Failed to save';
             document.body.appendChild(errorMsg);
             
-            // Remove after 3 seconds
             setTimeout(() => {
                 errorMsg.remove();
             }, 3000);
@@ -299,7 +299,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Cancel any ongoing speech
             speechSynthesis.cancel();
             
-            // Create message for new objects
             let message;
             if (newObjects.length === 1) {
                 message = `I see a ${newObjects[0]}`;
@@ -324,7 +323,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             speechSynthesis.speak(utterance);
             
-            // Update last spoken objects
             lastSpokenObjects = highConfidenceObjects;
         }
     }
@@ -335,16 +333,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const timestamp = new Date();
         
-        // Process each prediction and add to history if it's new
         predictions.forEach(prediction => {
-            // Get links from the prediction if available, or generate mock links
             const links = getObjectLinks(prediction.name);
             
-            // Add to history array (prepend to show newest first)
-            // Check if this object already exists in the history
+            // Does it exist?
             const existingIndex = detectionHistory.findIndex(item => item.name === prediction.name);
             if (existingIndex !== -1) {
-                // Remove the existing entry if found
                 detectionHistory.splice(existingIndex, 1);
             }
             
@@ -353,23 +347,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 confidence: prediction.confidence,
                 timestamp: timestamp,
                 links: links,
-                // Assign an icon based on object name
+
                 icon: getObjectIcon(prediction.name)
             });
         });
         
-        // Limit history to most recent 50 items
         if (detectionHistory.length > 50) {
             detectionHistory = detectionHistory.slice(0, 50);
         }
         
-        // Update the history display
         updateHistoryDisplay();
     }
     
-    // Generate appropriate icon for object type
     function getObjectIcon(objectName) {
-        // Map common object types to Font Awesome icons
         const iconMap = {
             person: 'fa-user',
             car: 'fa-car',
@@ -485,10 +475,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             detailsPanel.appendChild(saveButton);
         }
        
-        // rebind onclick event to save button
         saveButton.onclick = (e) => {
             e.stopPropagation(); // Prevent closing the details panel
-            // TODO: Implement save functionality
             console.log(`Saving details for ${item.name}`);
 
             // save the item to the database
@@ -496,22 +484,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         }
         
-        
-        // Create and show overlay
         const overlay = document.createElement('div');
         overlay.className = 'overlay';
         overlay.id = 'details-overlay';
         document.body.appendChild(overlay);
         
-        // Show the overlay and details panel
         overlay.style.display = 'block';
         detailsPanel.style.display = 'block';
         
-        // Handle click on overlay to close details
         overlay.addEventListener('click', closeDetailsPanel);
     }
-    
-    // Close the details panel
+
     function closeDetailsPanel() {
         detailsPanel.style.display = 'none';
         const overlay = document.getElementById('details-overlay');
@@ -524,7 +507,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     stopButton.addEventListener('click', stopCamera);
     closeDetails.addEventListener('click', closeDetailsPanel);
     
-    // Load voices when available
     function loadVoices() {
         return new Promise((resolve) => {
             let voices = speechSynthesis.getVoices();
@@ -539,7 +521,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Initialize voices
     loadVoices().then(voices => {
         console.log(`Loaded ${voices.length} voices for speech synthesis`);
     });

@@ -627,3 +627,80 @@ h2:after {
 .input-group input::placeholder {
   color: var(--text-light);
 }
+
+/* Google Sign-In styling */
+.google-signin-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 15px 0;
+}
+
+.separator::before,
+.separator::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(125, 82, 190, 0.3);
+}
+
+.separator span {
+  padding: 0 10px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+/* Success and error messages */
+.success-message,
+.error-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  animation: slideIn 0.3s ease, fadeOut 0.5s ease 2.5s forwards;
+  z-index: 100;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.success-message {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.error-message {
+  background-color: #F44336;
+  color: white;
+}
+
+.success-message i,
+.error-message i {
+  margin-right: 10px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

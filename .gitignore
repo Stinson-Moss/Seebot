@@ -2,3 +2,4 @@
 *.pem
 *.env
 *.pt
+venv

@@ -18,7 +18,7 @@ def connect():
         ssl_ca="ca.pem"
     )
 
-async def get_history(user: str):
+async def get_history_db(user: str):
     conn = connect()
     cursor = conn.cursor()
     
@@ -28,21 +28,37 @@ async def get_history(user: str):
     conn.close()
     return fetched_history
 
-async def save_detection(user: str, detection: dict):
-    logging.debug('Saving detection for user')
-    conn = connect()
-    logging.debug('Connected to database')
-    cursor = conn.cursor()
 
-    logging.debug('Cursor created')
+async def save_detection_db(user, detection):
+    try:
+        logging.debug('Saving detection for user')
+        conn = connect()
+        logging.debug('Connected to database')
+        cursor = conn.cursor()
+        logging.debug('Cursor created')
 
-    links = ",".join(detection["links"])
-    logging.debug('Links: ', links)
+        links = ','.join([
+            detection["links"][0]["url"],
+            detection["links"][1]["url"],
+            detection["links"][2]["url"],
+            detection["links"][3]["url"],
+            detection["links"][4]["url"]
+        ])
 
-    cursor.execute("INSERT INTO detections (email, object_detected, links) VALUES (%s, %s, %s)", (user, detection["name"], links))
-    logging.debug('Executed query')
+        logging.debug(f'Links: {links}')
 
-    conn.commit()
-    logging.debug('Committed')
-    conn.close()
-    logging.debug('Closed connection')
+        cursor.execute(
+            "INSERT INTO detections (email, object_detected, links) VALUES (%s, %s, %s)",
+            (user, detection["name"], links)
+        )
+        logging.debug('Executed query')
+
+        conn.commit()
+        logging.debug('Committed')
+        conn.close()
+        logging.debug('Closed connection')
+
+    except Exception as e:
+        logging.exception("Error occurred while saving detection")
+        raise  # re-raise so Flask knows it's a 500
+

@@ -8,4 +8,5 @@ flask-cors
 torch
 Pillow
 numpy
-
+opencv-python
+pandas

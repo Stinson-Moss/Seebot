@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from torch import hub
 from PIL import Image
-from db import save_detection
-from db import get_history
+from db import save_detection_db
+from db import get_history_db
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -15,19 +15,6 @@ model = hub.load('ultralytics/yolov5', 'yolov5s', trust_repo=True)
 async def detect():
     if 'image' not in request.files:
         return jsonify({"error": "No image provided"}), 400
-    
-    # Check if we're receiving JSON data with an image URL instead of a file
-    if request.is_json:
-        data = request.get_json()
-        if 'image' in data:
-            # Process the image URL
-            # This would typically involve downloading the image from the URL
-            # For now, we'll return an error as this functionality isn't implemented
-            return jsonify({"error": "Image URL processing not implemented"}), 501
-        else:
-            return jsonify({"error": "No image provided in JSON data"}), 400
-        
-
     # Handle JSON data with image URL
     if request.is_json:
         data = request.get_json()
@@ -57,7 +44,7 @@ async def detect():
                         "confidence": detection["confidence"],
                     }
                     for detection in detections
-                    if detection["confidence"] > 0.5
+                    if detection["confidence"] > 0
                 ]
                 
                 # Format response
@@ -79,8 +66,6 @@ async def detect():
 
     # Process detections
     detections = results.pandas().xyxy[0].to_dict(orient="records")
-
-    print ('Detections: ', detections)
 
     #Filtered detections
     filtered_detections = [
@@ -108,7 +93,7 @@ async def detect():
 
 @app.route('/api/history', methods=['GET'])
 async def history():
-    user_history = await get_history()
+    user_history = await get_history_db()
     return jsonify(user_history), 200
 
 @app.route('/api/save_detection', methods=['POST'])
@@ -118,10 +103,20 @@ async def save_detection():
         if not data:
             return jsonify({"error": "No data provided"}), 400
         
-        await save_detection(data["user"], data["detection"])
+        if data["user"] == "":
+            return jsonify({"error": "No user provided"}), 400
+        
+        if data["detection"]["name"] == "":
+            return jsonify({"error": "No detection name provided"}), 400
+        
+        if data["detection"]["links"] == "":
+            return jsonify({"error": "No links provided"}), 400
+        
+
+        await save_detection_db(data["user"], data["detection"])
         return jsonify({"message": "Detection saved successfully"}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to save detection: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=10000)
+    app.run(debug=True, use_reloader=False)
