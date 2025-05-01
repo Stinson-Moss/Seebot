@@ -4,6 +4,7 @@ from PIL import Image
 from db import save_detection_db
 from db import get_history_db
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -136,4 +137,5 @@ async def save_detection():
         return jsonify({"error": f"Failed to save detection: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    port = int(os.environ.get("SERVER_PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
