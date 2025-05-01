@@ -93,8 +93,25 @@ async def detect():
 
 @app.route('/api/history', methods=['GET'])
 async def history():
-    user_history = await get_history_db()
-    return jsonify(user_history), 200
+    try:
+        # Get user from query parameters
+        user = request.args.get('user')
+        
+        # Check if user parameter is provided
+        if not user:
+            return jsonify({"error": "No user provided in query parameters"}), 400
+
+        # Log the user we're trying to fetch history for
+        print(f"Fetching history for user: {user}")
+        
+        # Get user history from database
+        user_history = await get_history_db(user)
+        print("USER HISTORY", user_history)
+
+        # Return history as JSON response
+        return jsonify(user_history), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to get history: {str(e)}"}), 500
 
 @app.route('/api/save_detection', methods=['POST'])
 async def save_detection():

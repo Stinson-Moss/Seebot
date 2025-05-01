@@ -4,6 +4,8 @@ const API_URL = 'http://127.0.0.1:5000/api/detect';
 // API endpoint for saving detections
 const SAVE_DETECTION_URL = 'http://127.0.0.1:5000/api/save_detection';
 
+const HISTORY_URL = 'http://127.0.0.1:5000/api/history';
+
 // Generate mock links for detected objects
 function getObjectLinks(objectName) {
     // In a real app, you would fetch these links from your backend API
@@ -434,6 +436,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             historyList.appendChild(historyItem);
+
+            
         });
     }
     
@@ -496,6 +500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function closeDetailsPanel() {
+        console.log("Closing details panel");
         detailsPanel.style.display = 'none';
         const overlay = document.getElementById('details-overlay');
         if (overlay) {
@@ -549,4 +554,59 @@ document.addEventListener('DOMContentLoaded', async () => {
             speechSynthesis.speak(utterance);
         }
     });
+
+    // Function to load user's detection history
+    async function loadUserHistory() {
+        if (!user) {
+            console.log('No user logged in, cannot load history');
+            return;
+        }
+        
+        try {
+
+            const response = await axios.get(`${HISTORY_URL}?user=${encodeURIComponent(user)}`);
+            const historyData = response.data;
+            console.log("RESPONSE", response);
+            detectionHistory = historyData.map(item => {
+                // Parse links from comma-separated string
+                const linkUrls = item.links.split(',');
+                const links = linkUrls.map((url, index) => {
+                    const linkTemplates = [
+                        { title: 'Wikipedia article', icon: 'fa-wikipedia-w' },
+                        { title: 'Google Images', icon: 'fa-image' },
+                        { title: 'YouTube videos', icon: 'fa-youtube' },
+                        { title: 'Shopping results', icon: 'fa-shopping-cart' },
+                        { title: 'Dictionary definition', icon: 'fa-book' }
+                    ];
+                    
+                    return {
+                        title: linkTemplates[index].title,
+                        url: url,
+                        icon: getObjectIcon(linkTemplates[index].title)
+                    };
+                });
+                
+                return {
+                    id: item.id,
+                    name: item.object_detected,
+                    timestamp: new Date(item.created_at),
+                    links: links
+                };
+            });
+            
+            // Update the history list in the UI
+            updateHistoryDisplay();
+            
+            console.log(`Loaded ${detectionHistory.length} history items`);
+        } catch (error) {
+            console.error('Error loading history:', error);
+        }
+    }
+    
+    // Load history when user is available
+    if (user) {
+        loadUserHistory();
+    }
+
+    console.log("User:", user);
 });

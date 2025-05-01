@@ -18,13 +18,16 @@ def connect():
         ssl_ca="ca.pem"
     )
 
-async def get_history_db(user: str):
+async def get_history_db(user):
     conn = connect()
     cursor = conn.cursor()
     
     cursor.execute("SELECT * FROM detections WHERE email = %s ORDER BY created_at DESC", (user,))
-
-    fetched_history = cursor.fetchall()
+    
+    # Convert the fetched rows to a list of dictionaries for easier JSON serialization
+    columns = [col[0] for col in cursor.description]
+    fetched_history = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
     conn.close()
     return fetched_history
 
