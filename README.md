@@ -64,7 +64,7 @@ The application is configured for deployment on Render, with proper port configu
    ```
    ```bash
    cd frontend
-   npm run dev
+   # run index.html in local browser
    ```
 
 ## 📝 License
