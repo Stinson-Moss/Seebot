@@ -1,43 +1,68 @@
-# SEEBOT: Object Identifier for the Visually Impaired
+# Seebot - AI-Powered Object Detection System
 
-What is SEEBOT?
-SEEBOT is an AI-powered object detection web application designed to assist individuals who are visually impaired. Using YOLOv5 model, SEEBOT identifies common objects in real-time through the webcam and displays their names on the screen, offering users auditory or visual assistance in navigating their environment safely and independently.
+Seebot is a full-stack web application that leverages computer vision and machine learning to perform real-time object detection. The system uses YOLOv5, an object detection model, to identify objects in images and provides relevant information about detected objects.
 
-📂 Project Structure
-index.html – Main webpage that loads the AI model and webcam.
+## 🚀 Key Features
 
-style.css – Stylesheet for responsive and accessible UI.
+- [x] **Real-time Object Detection**: Utilizes YOLOv5 for accurate and fast object detection
+- [x] **User History Tracking**: Maintains a history of detections for each user
+- [ ] **Secure Database Integration**: MySQL database with SSL encryption for secure data storage (database created; SSL encryption in-progress)
+- [x] **RESTful API Architecture**: Clean and well-documented API endpoints
+- [ ] **Cross-Origin Resource Sharing (CORS)**: Secure cross-origin requests handling (in-progress)
+- [ ] **Cloud Deployment**: Ready for deployment on cloud platforms (Render; in-progress)
 
-script.js – JavaScript logic to initialize camera, load the ML model, and handle predictions.
+## 🛠️ Technical Stack
 
-README.md – Project overview and usage instructions.
+### Backend
+- **Python**: Core programming language
+- **Flask**: Web framework for building the REST API
+- **YOLOv5**: Object detection model
+- **MySQL**: Database for storing detection history
+- **SSL/TLS**: Secure database connections
+- **Environment Variables**: Secure configuration management
 
-🔍 How It Works
-Loads the COCO-SSD model via TensorFlow.js.
+### API Endpoints
+- `/api/detect`: POST endpoint for object detection
+- `/api/history`: GET endpoint for retrieving user detection history
+- `/api/save_detection`: POST endpoint for saving detection results
 
-Activates the webcam and continuously analyzes video frames.
+## 🔒 Security Features
 
-Detects up to 80 common object types and displays them with labels.
+- [ ] SSL/TLS encryption for database connections
+- [x] Environment variable management for sensitive data
+- [ ] Input validation and error handling
+- [ ] Secure CORS configuration
 
-Future improvements may include audio output for detected objects.
+## 🚀 Deployment
 
-🛠️ Technologies Used
-HTML/CSS/JavaScript
+The application is configured for deployment on Render, with proper port configuration and environment variable handling. The system is designed to be scalable and maintainable in a production environment.
 
-TensorFlow.js
+## 💡 Technical Highlights
 
-COCO-SSD pre-trained model
+- Asynchronous API endpoints for better performance
+- Comprehensive error handling and logging
+- Efficient database operations with connection pooling
+- Support for both file uploads and URL-based image processing
+- Confidence threshold filtering for accurate detections
 
-Font Awesome for accessible icons
+## 🔧 Setup and Configuration
 
-Google Fonts (Roboto) for modern readability
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Set up environment variables:
+   - DB_HOST
+   - DB_PORT
+   - DB_USER
+   - DB_PASSWORD
+   - DB_NAME
+4. Run the application:
+   ```bash
+   python backend/app.py
+   ```
 
-👥 Authors
-Project Group 9, CS321 - Spring 2025, George Mason University
-Nasrin Ali
-Stinson Moss 
-Aansa Virk
-Kamillah Ismail
+## 📝 License
 
-📜 License
-This project is for academic use. For external or commercial use, please contact the project owners.
+This project is licensed under the MIT License - see the LICENSE file for details.

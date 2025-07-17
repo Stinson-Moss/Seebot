@@ -1,14 +1,8 @@
-// API endpoint for YOLOv5 detection
 const API_URL = 'http://127.0.0.1:5000/api/detect';
-
-// API endpoint for saving detections
 const SAVE_DETECTION_URL = 'http://127.0.0.1:5000/api/save_detection';
-
 const HISTORY_URL = 'http://127.0.0.1:5000/api/history';
 
-// Generate mock links for detected objects
 function getObjectLinks(objectName) {
-    // In a real app, you would fetch these links from your backend API
     const linkTemplates = [
         { title: 'Wikipedia article', url: `https://en.wikipedia.org/wiki/${objectName}`, icon: 'fa-wikipedia-w' },
         { title: 'Google Images', url: `https://www.google.com/search?tbm=isch&q=${objectName}`, icon: 'fa-image' },
@@ -17,14 +11,12 @@ function getObjectLinks(objectName) {
         { title: 'Dictionary definition', url: `https://www.merriam-webster.com/dictionary/${objectName}`, icon: 'fa-book' }
     ];
     
-    // Return all link templates with the object name inserted
     return linkTemplates.map(template => ({
         title: template.title,
         url: template.url,
         icon: template.icon
     }));
 }
-
 
 document.addEventListener('DOMContentLoaded', async () => {
     const videoElement = document.getElementById('videoElement');
@@ -36,7 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ctx = canvas.getContext('2d');
     const languageSelector = document.getElementById('voiceLanguage');
     
-    // History panel elements
     const historyList = document.getElementById('history-list');
     const detailsPanel = document.getElementById('details-panel');
     const detailTitle = document.getElementById('detail-title');
@@ -44,7 +35,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const detailLinks = document.getElementById('detail-links');
     const closeDetails = document.getElementById('close-details');
     
-    // Login elements
     const loginWidget = document.getElementById('login-widget');
     const userEmailInput = document.getElementById('user-email');
     const confirmLoginBtn = document.getElementById('confirm-login');
@@ -55,17 +45,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     let speechSynthesis = window.speechSynthesis;
     let lastSpokenObjects = [];
     
-    // Array to store detection history
     let detectionHistory = [];
     let user = null;
 
-    // Get stored user from localStorage if available
     const storedUser = localStorage.getItem('seebot_user');
     if (storedUser) {
         user = storedUser;
     }
 
-    // Setup login widget listeners
     confirmLoginBtn.addEventListener('click', () => {
         const email = userEmailInput.value.trim();
         if (email) {
@@ -86,14 +73,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         loginOverlay.style.display = 'block';
         loginWidget.style.display = 'block';
         
-        // Pre-fill with stored user
         if (user) {
             userEmailInput.value = user;
         }
         
         userEmailInput.focus();
         
-        // Handle overlay click
         loginOverlay.addEventListener('click', hideLoginWidget);
     }
     
@@ -121,20 +106,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
             
-            // Here you would typically make an API call:
             const response = await axios.post(SAVE_DETECTION_URL, data, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
             
-            // Show success message
             const successMsg = document.createElement('div');
             successMsg.className = 'success-message';
             successMsg.innerHTML = '<i class="fas fa-check-circle"></i> Saved successfully!';
             document.body.appendChild(successMsg);
             
-            // Remove after 3 seconds
             setTimeout(() => {
                 successMsg.remove();
             }, 3000);
@@ -183,7 +165,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             detecting = false;
             predictionText.innerHTML = '<i class="fas fa-camera-slash"></i> Camera stopped.';
             
-            // Cancel any ongoing speech when camera stops
             speechSynthesis.cancel();
         }
     }
@@ -191,7 +172,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function detectObjects() {
         detecting = true;
         
-        // Wait for the video to be properly loaded
         if (videoElement.readyState < 2) {
             await new Promise(resolve => {
                 videoElement.onloadeddata = () => {
@@ -200,7 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         
-        // Create a hidden canvas to capture frames
         const captureCanvas = document.createElement('canvas');
         captureCanvas.width = videoElement.videoWidth;
         captureCanvas.height = videoElement.videoHeight;
@@ -208,61 +187,48 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         while (detecting) {
             try {
-                // Draw current video frame to the hidden canvas
                 captureCtx.drawImage(videoElement, 0, 0, captureCanvas.width, captureCanvas.height);
                 
-                // Convert canvas to blob
                 const blob = await new Promise(resolve => {
                     captureCanvas.toBlob(resolve, 'image/jpeg', 0.9);
                 });
                 
-                // Create form data for API request
                 const formData = new FormData();
                 formData.append('image', blob, 'frame.jpg');
                 
-                // Send frame to YOLOv5 backend for detection
                 const response = await axios.post(API_URL, formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }
                 });
                 
-                // Process the response
                 const data = response.data;
                 const predictions = data.detections || [];
                 
-                // Draw the current frame on the visible canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
                 
-                // Display predictions with icons
                 if (predictions.length > 0) {
                     predictionText.innerHTML = `<i class="fas fa-check-circle"></i> Detected: ${predictions.map(p => `<strong>${p.name}</strong> (${Math.round(p.confidence * 100)}%)`).join(", ")}`;
                     
-                    // Speak detected objects
                     speakDetectedObjects(predictions);
                     
-                    // Add to detection history
                     addToHistory(predictions);
                     
-                    // Draw bounding boxes
                     predictions.forEach(prediction => {
                         const xmin = prediction.xmin;
                         const ymin = prediction.ymin;
                         const width = prediction.xmax - prediction.xmin;
                         const height = prediction.ymax - prediction.ymin;
                         
-                        // Draw rectangle
                         ctx.strokeStyle = '#e74c3c';
                         ctx.lineWidth = 4;
                         ctx.strokeRect(xmin, ymin, width, height);
                         
-                        // Draw label background
                         ctx.fillStyle = 'rgba(231, 76, 60, 0.8)';
                         const textWidth = ctx.measureText(prediction.name).width;
                         ctx.fillRect(xmin, ymin - 30, textWidth + 20, 30);
                         
-                        // Draw text
                         ctx.fillStyle = '#ffffff';
                         ctx.font = '18px Roboto';
                         ctx.fillText(prediction.name, xmin + 10, ymin - 10);
@@ -275,30 +241,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 predictionText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Detection error';
             }
             
-            // Limit frame rate for performance
             await new Promise(resolve => setTimeout(resolve, 16));
         }
     }
     
     function speakDetectedObjects(predictions) {
-        // Don't speak if speech is disabled
         if (!speechEnabled) {
             return;
         }
         
-        // Get current object classes
         const currentObjects = predictions.map(p => p.name);
         
-        // Filter for objects with confidence over 50%
         const highConfidenceObjects = predictions
             .filter(p => p.confidence > 0.5)
             .map(p => p.name);
             
-        // Check if we have new objects to announce
         const newObjects = highConfidenceObjects.filter(obj => !lastSpokenObjects.includes(obj));
         
         if (newObjects.length > 0) {
-            // Cancel any ongoing speech
             speechSynthesis.cancel();
             
             let message;
@@ -309,14 +269,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 message = `I see ${newObjects.join(', ')} and a ${lastObject}`;
             }
             
-            // Create and speak utterance
             const utterance = new SpeechSynthesisUtterance(message);
-            utterance.lang = languageSelector.value; // Use selected language
+            utterance.lang = languageSelector.value;
             utterance.rate = 1.0;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
             
-            // Try to find a voice that matches the selected language
             const voices = speechSynthesis.getVoices();
             const matchingVoice = voices.find(voice => voice.lang === languageSelector.value);
             if (matchingVoice) {
@@ -329,7 +287,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Add detected objects to history
     async function addToHistory(predictions) {
         if (!predictions || predictions.length === 0) return;
         
@@ -404,13 +361,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             cake: 'fa-cake-candles'
         };
         
-        // Return matching icon or default icon
         return iconMap[objectName.toLowerCase()] || 'fa-eye';
     }
     
-    // Update the history display with current history items
     function updateHistoryDisplay() {
-        // Clear current list
         historyList.innerHTML = '';
         
         if (detectionHistory.length === 0) {
@@ -418,9 +372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // Add items to history list
         detectionHistory.forEach(item => {
-            // Create history item element
             const historyItem = document.createElement('div');
             historyItem.className = 'history-item';
             historyItem.innerHTML = `
@@ -441,18 +393,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Format timestamp for display
     function formatTimestamp(timestamp) {
         return timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
     
-    // Show details panel for a history item
     function showObjectDetails(item) {
-        // Update details panel content
         detailTitle.textContent = item.name;
         detailDate.textContent = `Detected at ${formatTimestamp(item.timestamp)}`;
         
-        // Clear and populate links
         detailLinks.innerHTML = '';
         item.links.forEach(link => {
             const linkElement = document.createElement('a');
@@ -469,7 +417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             detailLinks.appendChild(linkElement);
         });
-        // Add save button
+        
         let saveButton = document.getElementById('save-button');
         if (saveButton == null) {
             saveButton = document.createElement('button');
@@ -480,10 +428,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
        
         saveButton.onclick = (e) => {
-            e.stopPropagation(); // Prevent closing the details panel
+            e.stopPropagation(); 
             console.log(`Saving details for ${item.name}`);
 
-            // save the item to the database
             saveItemToDatabase(item, user);
 
         }
@@ -530,7 +477,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`Loaded ${voices.length} voices for speech synthesis`);
     });
     
-    // Add speech toggle functionality
     let speechEnabled = true;
     toggleSpeechBtn.addEventListener('click', () => {
         speechEnabled = !speechEnabled;
@@ -540,22 +486,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             toggleSpeechBtn.innerHTML = '<i class="fas fa-volume-mute"></i> Speech Off';
             toggleSpeechBtn.classList.add('off');
-            speechSynthesis.cancel(); // Cancel any ongoing speech
+            speechSynthesis.cancel(); 
         }
     });
     
-    // Add language change listener
     languageSelector.addEventListener('change', () => {
-        // Announce language change if speech is enabled
         if (speechEnabled) {
-            speechSynthesis.cancel(); // Cancel any ongoing speech
+            speechSynthesis.cancel(); 
             const utterance = new SpeechSynthesisUtterance(`Voice language changed to ${languageSelector.options[languageSelector.selectedIndex].text}`);
             utterance.lang = languageSelector.value;
             speechSynthesis.speak(utterance);
         }
     });
 
-    // Function to load user's detection history
     async function loadUserHistory() {
         if (!user) {
             console.log('No user logged in, cannot load history');
@@ -568,7 +511,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const historyData = response.data;
             console.log("RESPONSE", response);
             detectionHistory = historyData.map(item => {
-                // Parse links from comma-separated string
                 const linkUrls = item.links.split(',');
                 const links = linkUrls.map((url, index) => {
                     const linkTemplates = [
@@ -594,7 +536,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
             
-            // Update the history list in the UI
             updateHistoryDisplay();
             
             console.log(`Loaded ${detectionHistory.length} history items`);
@@ -603,7 +544,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Load history when user is available
     if (user) {
         loadUserHistory();
     }

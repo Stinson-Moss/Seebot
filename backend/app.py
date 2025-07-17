@@ -1,3 +1,11 @@
+"""
+app.py
+
+Flask backend for SeeBot: provides API endpoints for object detection (using YOLOv5),
+saving detection results, and retrieving user detection history. Handles CORS and
+integrates with a MySQL database for persistent storage.
+"""
+
 from flask import Flask, request, jsonify
 from yolov5 import YOLOv5
 from PIL import Image
@@ -9,66 +17,20 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Load YOLOv5 model
-model = YOLOv5('yolov5s.pt', device='cpu')
+model = YOLOv5('yolov5s.pt', device='cpu', load_on_init=True)
 
 @app.route('/api/detect', methods=['POST'])
 async def detect():
     if 'image' not in request.files:
         return jsonify({"error": "No image provided"}), 400
-    # Handle JSON data with image URL
-    if request.is_json:
-        data = request.get_json()
-        if 'image' in data:
-            try:
-                import requests
-                from io import BytesIO
-                
-                # Download the image from the URL
-                response = requests.get(data['image_url'])
-                image = Image.open(BytesIO(response.content))
-                
-                # Perform object detection
-                results = model(image)
-                
-                # Process detections
-                detections = results.pandas().xyxy[0].to_dict(orient="records")
-                
-                # Filter detections
-                filtered_detections = [
-                    {
-                        "xmin": detection["xmin"],
-                        "xmax": detection["xmax"],
-                        "ymin": detection["ymin"],
-                        "ymax": detection["ymax"],
-                        "name": detection["name"],
-                        "confidence": detection["confidence"],
-                    }
-                    for detection in detections
-                    if detection["confidence"] > 0
-                ]
-                
-                # Format response
-                response = {
-                    "detections": filtered_detections
-                }
-                
-                return jsonify(response), 200
-            except Exception as e:
-                return jsonify({"error": f"Error processing image URL: {str(e)}"}), 500
             
-    # If we reach here, we're expecting a file upload
     image_file = request.files['image']
     image = Image.open(image_file)
 
-    print ('Opened image')
-    # Perform object detection
-    results = model(image)
+    results = model.predict(image)
 
-    # Process detections
     detections = results.pandas().xyxy[0].to_dict(orient="records")
-
-    #Filtered detections
+    
     filtered_detections = [
         {
             "xmin": detection["xmin"],
@@ -83,33 +45,22 @@ async def detect():
         if detection["confidence"] > 0.5
     ]
 
-    # Format response
     response = {
         "detections": filtered_detections
     }
-
-    print ('Response: ', response)
 
     return jsonify(response), 200
 
 @app.route('/api/history', methods=['GET'])
 async def history():
     try:
-        # Get user from query parameters
         user = request.args.get('user')
         
-        # Check if user parameter is provided
         if not user:
             return jsonify({"error": "No user provided in query parameters"}), 400
 
-        # Log the user we're trying to fetch history for
-        print(f"Fetching history for user: {user}")
-        
-        # Get user history from database
         user_history = await get_history_db(user)
-        print("USER HISTORY", user_history)
 
-        # Return history as JSON response
         return jsonify(user_history), 200
     except Exception as e:
         return jsonify({"error": f"Failed to get history: {str(e)}"}), 500

@@ -1,3 +1,13 @@
+"""
+db.py
+
+Database utility module for SeeBot backend.
+
+- Handles MySQL database connections using environment variables for configuration.
+- Provides functions for saving detection results and retrieving user detection history.
+- Uses SSL/TLS for secure database connections.
+"""
+
 import mysql.connector as mysql
 import os
 from dotenv import load_dotenv
@@ -24,7 +34,6 @@ async def get_history_db(user):
     
     cursor.execute("SELECT * FROM detections WHERE email = %s ORDER BY created_at DESC", (user,))
     
-    # Convert the fetched rows to a list of dictionaries for easier JSON serialization
     columns = [col[0] for col in cursor.description]
     fetched_history = [dict(zip(columns, row)) for row in cursor.fetchall()]
     

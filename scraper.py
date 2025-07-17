@@ -1,3 +1,11 @@
+"""
+scraper.py
+
+Utility functions for scraping Google search and image search results.
+Provides methods to extract top web links for a given query or image,
+used for augmenting object detection results with relevant external resources.
+"""
+
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
